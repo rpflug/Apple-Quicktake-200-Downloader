@@ -271,8 +271,17 @@ def gui_main() -> int:
     ttk.Label(body, textvariable=status_value, wraplength=570).grid(
         row=4, column=0, columnspan=3, sticky="w", pady=(0, 10)
     )
-    photos = tk.Listbox(body)
+    photos = tk.Listbox(body, selectmode=tk.EXTENDED, exportselection=False)
     photos.grid(row=5, column=0, columnspan=3, sticky="nsew")
+
+    def use_list_selection(_event=None) -> None:
+        selected = photos.curselection()
+        if not selected:
+            return
+        first_value.set(int(photos.get(selected[0]).split()[0]))
+        last_value.set(int(photos.get(selected[-1]).split()[0]))
+
+    photos.bind("<<ListboxSelect>>", use_list_selection)
 
     def set_busy(busy: bool) -> None:
         download_button.configure(state="disabled" if busy else "normal")
@@ -292,12 +301,13 @@ def gui_main() -> int:
             camera = QuickTake200(serial)
             camera.connect(9600)
             count = camera.picture_count()
+            reset_range = not download
             root.after(0, lambda: (
                 photos.delete(0, tk.END),
                 progress.configure(maximum=max(count, 1), value=0),
                 first_box.configure(to=max(count, 1)),
                 last_box.configure(to=max(count, 1)),
-                last_value.set(count),
+                last_value.set(count) if reset_range else None,
             ))
             destination = Path(output_value.get()).expanduser()
             if download:
@@ -341,7 +351,14 @@ def gui_main() -> int:
         requested_range = None
         if use_range:
             try:
-                requested_range = (int(first_value.get()), int(last_value.get()))
+                selected = photos.curselection()
+                if selected:
+                    requested_range = (
+                        int(photos.get(selected[0]).split()[0]),
+                        int(photos.get(selected[-1]).split()[0]),
+                    )
+                else:
+                    requested_range = (int(first_value.get()), int(last_value.get()))
             except (TypeError, ValueError, tk.TclError):
                 messagebox.showerror("QuickTake 200", "Enter whole photo numbers for the range.")
                 return

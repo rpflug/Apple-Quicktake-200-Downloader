@@ -35,7 +35,7 @@ Reconnect the adapter after installation. Ordinary use does not need `sudo` or a
 2. Insert the 2.5 mm plug fully into the camera.
 3. Turn the camera on and select **PC Mode**.
 4. Open **Apple QuickTake 200 Downloader** from the application menu.
-5. Choose a destination and select **Download All**, or enter **From** and **Through** photo numbers and select **Download Range**.
+5. Choose a destination and select **Download All**. To download a range, highlight consecutive photos in the list (or enter **From** and **Through** numbers), then select **Download Range**.
 
 The default speed is 9600 baud because it was reliable in hardware testing. Downloads are written to a temporary `.part` file and renamed only after the complete JPEG passes size and boundary checks.
 
