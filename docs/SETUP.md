@@ -4,7 +4,7 @@
 
 The downloader runs as the signed-in user. The one-time installer uses `pkexec` for a standard graphical administrator authorization. It does not store a password, create a setuid Python program, or grant broad serial-device access.
 
-The udev rule applies only to serial ports belonging to USB vendor/product `06cd:010f` and grants access through systemd-logind's `uaccess` mechanism to the active local session. Other USB and serial devices retain their normal permissions.
+The udev rule applies only to serial ports belonging to USB vendor/product `06cd:010f` and explicitly applies systemd-logind's `uaccess` ACL to the active local session. Other USB and serial devices retain their normal permissions.
 
 Installing the software does not permanently alter a USB port. A physical USB socket continues working normally with other devices. The persistent changes are files installed under `/usr`, a DKMS registration, and the narrow udev rule.
 
@@ -86,4 +86,3 @@ After rebooting, Linux returns to its original in-kernel Keyspan driver.
 The camera session uses ENQ/ACK framing and QuickTake's DLE-framed packets. Responses are checked using the protocol BCC. Downloads are checked against the size reported by the camera and must start and end with JPEG markers before being saved.
 
 Only these read operations are implemented: version, picture count, picture name, picture size, and image download. Delete, erase-all, format, capture, and clock-setting commands are intentionally absent.
-
