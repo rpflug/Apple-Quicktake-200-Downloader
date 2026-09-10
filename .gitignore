@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.ko
+*.o
+*.mod*
+Module.symvers
+modules.order
+.cache/
+quicktake-photos/
+

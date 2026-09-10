@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Apple QuickTake 200 Downloader
+Comment=Download photographs from an Apple QuickTake 200
+Exec=/usr/bin/quicktake200 --gui
+Icon=camera-photo
+Terminal=false
+Categories=Graphics;Photography;
+Keywords=Apple;QuickTake;camera;photo;
+

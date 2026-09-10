@@ -1,0 +1,2 @@
+obj-m += keyspan.o
+

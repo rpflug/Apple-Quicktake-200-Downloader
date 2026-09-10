@@ -1,0 +1,3 @@
+# Give the active local desktop user access to the Keyspan USA-28 serial ports.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="06cd", ATTRS{idProduct}=="010f", TAG+="uaccess"
+
