@@ -237,12 +237,14 @@ def gui_main() -> int:
 
     port_value = tk.StringVar(value=(_available_ports() or ["/dev/ttyUSB0"])[0])
     output_value = tk.StringVar(value=str(Path.home() / "Pictures" / "QuickTake 200"))
+    first_value = tk.IntVar(value=1)
+    last_value = tk.IntVar(value=1)
     status_value = tk.StringVar(value="Put the camera in PC Mode and connect it to Keyspan Port 1.")
 
     body = ttk.Frame(root, padding=18)
     body.pack(fill="both", expand=True)
     body.columnconfigure(1, weight=1)
-    body.rowconfigure(4, weight=1)
+    body.rowconfigure(5, weight=1)
 
     ttk.Label(body, text="Serial port").grid(row=0, column=0, sticky="w", pady=5)
     port_box = ttk.Combobox(body, textvariable=port_value, values=_available_ports(), state="normal")
@@ -254,16 +256,27 @@ def gui_main() -> int:
         filedialog.askdirectory(initialdir=output_value.get()) or output_value.get()
     )).grid(row=1, column=2, pady=5)
 
+    range_row = ttk.Frame(body)
+    range_row.grid(row=2, column=0, columnspan=3, sticky="w", pady=(10, 2))
+    ttk.Label(range_row, text="Photo range:").pack(side="left")
+    ttk.Label(range_row, text="From").pack(side="left", padx=(12, 4))
+    first_box = ttk.Spinbox(range_row, from_=1, to=9999, width=6, textvariable=first_value)
+    first_box.pack(side="left")
+    ttk.Label(range_row, text="Through").pack(side="left", padx=(12, 4))
+    last_box = ttk.Spinbox(range_row, from_=1, to=9999, width=6, textvariable=last_value)
+    last_box.pack(side="left")
+
     progress = ttk.Progressbar(body, mode="determinate")
-    progress.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(16, 7))
+    progress.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(12, 7))
     ttk.Label(body, textvariable=status_value, wraplength=570).grid(
-        row=3, column=0, columnspan=3, sticky="w", pady=(0, 10)
+        row=4, column=0, columnspan=3, sticky="w", pady=(0, 10)
     )
     photos = tk.Listbox(body)
-    photos.grid(row=4, column=0, columnspan=3, sticky="nsew")
+    photos.grid(row=5, column=0, columnspan=3, sticky="nsew")
 
     def set_busy(busy: bool) -> None:
         download_button.configure(state="disabled" if busy else "normal")
+        range_button.configure(state="disabled" if busy else "normal")
         refresh_button.configure(state="disabled" if busy else "normal")
 
     def finish(error: Exception | None = None) -> None:
@@ -272,23 +285,38 @@ def gui_main() -> int:
             status_value.set(f"Could not communicate with the camera: {error}")
             messagebox.showerror("QuickTake 200", str(error))
 
-    def camera_job(download: bool) -> None:
+    def camera_job(download: bool, requested_range: tuple[int, int] | None = None) -> None:
         serial = SerialPort(port_value.get())
         try:
             serial.open()
             camera = QuickTake200(serial)
             camera.connect(9600)
             count = camera.picture_count()
-            root.after(0, lambda: (photos.delete(0, tk.END), progress.configure(maximum=max(count, 1), value=0)))
+            root.after(0, lambda: (
+                photos.delete(0, tk.END),
+                progress.configure(maximum=max(count, 1), value=0),
+                first_box.configure(to=max(count, 1)),
+                last_box.configure(to=max(count, 1)),
+                last_value.set(count),
+            ))
             destination = Path(output_value.get()).expanduser()
             if download:
                 destination.mkdir(parents=True, exist_ok=True)
-            for frame in range(1, count + 1):
+            if requested_range is None:
+                frames = range(1, count + 1)
+            else:
+                first, last = requested_range
+                if first < 1 or last < first or last > count:
+                    raise QuickTakeError(f"Choose a range from 1 through {count}")
+                frames = range(first, last + 1)
+                root.after(0, lambda: progress.configure(maximum=last - first + 1, value=0))
+            total = len(frames)
+            for position, frame in enumerate(frames, 1):
                 name = camera.picture_name(frame)
                 size = camera.picture_size(frame)
-                root.after(0, lambda f=frame, n=name, s=size: (
+                root.after(0, lambda f=frame, n=name, s=size, p=position, t=total: (
                     photos.insert(tk.END, f"{f:3}   {n}   ({s:,} bytes)"),
-                    status_value.set(f"{'Downloading' if download else 'Reading'} photo {f} of {count}…"),
+                    status_value.set(f"{'Downloading' if download else 'Reading'} photo {f} ({p} of {t})…"),
                 ))
                 if download:
                     image = camera.download(frame)
@@ -297,9 +325,9 @@ def gui_main() -> int:
                     temporary = (destination / name).with_suffix(Path(name).suffix + ".part")
                     temporary.write_bytes(image)
                     temporary.replace(destination / name)
-                root.after(0, lambda f=frame: progress.configure(value=f))
+                root.after(0, lambda p=position: progress.configure(value=p))
             camera.disconnect()
-            message = f"Downloaded {count} photos to {destination}" if download else f"Found {count} photos"
+            message = f"Downloaded {total} photos to {destination}" if download else f"Found {count} photos"
             root.after(0, lambda: status_value.set(message))
             if download:
                 root.after(0, lambda: messagebox.showinfo("Download complete", message))
@@ -309,15 +337,27 @@ def gui_main() -> int:
         finally:
             serial.close()
 
-    def start(download: bool) -> None:
+    def start(download: bool, use_range: bool = False) -> None:
+        requested_range = None
+        if use_range:
+            try:
+                requested_range = (int(first_value.get()), int(last_value.get()))
+            except (TypeError, ValueError, tk.TclError):
+                messagebox.showerror("QuickTake 200", "Enter whole photo numbers for the range.")
+                return
+            if requested_range[0] < 1 or requested_range[1] < requested_range[0]:
+                messagebox.showerror("QuickTake 200", "The Through number must be at least the From number.")
+                return
         set_busy(True)
         status_value.set("Connecting to the camera…")
-        threading.Thread(target=camera_job, args=(download,), daemon=True).start()
+        threading.Thread(target=camera_job, args=(download, requested_range), daemon=True).start()
 
     buttons = ttk.Frame(body)
-    buttons.grid(row=5, column=0, columnspan=3, sticky="e", pady=(14, 0))
+    buttons.grid(row=6, column=0, columnspan=3, sticky="e", pady=(14, 0))
     refresh_button = ttk.Button(buttons, text="Show Photos", command=lambda: start(False))
     refresh_button.pack(side="left", padx=5)
+    range_button = ttk.Button(buttons, text="Download Range", command=lambda: start(True, True))
+    range_button.pack(side="left", padx=(0, 5))
     download_button = ttk.Button(buttons, text="Download All", command=lambda: start(True))
     download_button.pack(side="left")
 

@@ -35,7 +35,7 @@ Reconnect the adapter after installation. Ordinary use does not need `sudo` or a
 2. Insert the 2.5 mm plug fully into the camera.
 3. Turn the camera on and select **PC Mode**.
 4. Open **Apple QuickTake 200 Downloader** from the application menu.
-5. Choose a destination and select **Download All**.
+5. Choose a destination and select **Download All**, or enter **From** and **Through** photo numbers and select **Download Range**.
 
 The default speed is 9600 baud because it was reliable in hardware testing. Downloads are written to a temporary `.part` file and renamed only after the complete JPEG passes size and boundary checks.
 
@@ -73,4 +73,3 @@ python3 -m quicktake200 --help
 ```
 
 The project is licensed under GPL-2.0-only because it incorporates and modifies the Linux Keyspan driver.
-
