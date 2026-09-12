@@ -232,47 +232,120 @@ def gui_main() -> int:
 
     root = tk.Tk()
     root.title("Apple QuickTake 200 Downloader")
-    root.geometry("620x430")
-    root.minsize(520, 360)
+    root.geometry("840x680")
+    root.minsize(700, 560)
+
+    colors = {
+        "bg": "#0b0f0e",
+        "panel": "#111816",
+        "panel_dark": "#0e1513",
+        "line": "#26342f",
+        "ink": "#eef5f1",
+        "muted": "#94a69e",
+        "green": "#8ee6ad",
+        "amber": "#f3c878",
+        "red": "#ef897d",
+        "button_ink": "#07100c",
+    }
+    root.configure(bg=colors["bg"])
+
+    style = ttk.Style(root)
+    style.theme_use("clam")
+    style.configure("Tail.TFrame", background=colors["bg"])
+    style.configure("Panel.TFrame", background=colors["panel_dark"])
+    style.configure("Tail.TLabel", background=colors["bg"], foreground=colors["ink"], font=("Sans", 10))
+    style.configure("Panel.TLabel", background=colors["panel_dark"], foreground=colors["ink"], font=("Sans", 10))
+    style.configure("Muted.TLabel", background=colors["panel_dark"], foreground=colors["muted"], font=("Sans", 9))
+    style.configure("Eyebrow.TLabel", background=colors["panel_dark"], foreground=colors["green"], font=("Sans", 8, "bold"))
+    style.configure("Tail.TEntry", fieldbackground=colors["panel"], foreground=colors["ink"], bordercolor=colors["line"], lightcolor=colors["line"], darkcolor=colors["line"], padding=8)
+    style.configure("Tail.TCombobox", fieldbackground=colors["panel"], background=colors["panel"], foreground=colors["ink"], arrowcolor=colors["green"], bordercolor=colors["line"], padding=7)
+    style.map("Tail.TCombobox", fieldbackground=[("readonly", colors["panel"])], foreground=[("readonly", colors["ink"])])
+    style.configure("Tail.TSpinbox", fieldbackground=colors["panel"], background=colors["panel"], foreground=colors["ink"], arrowcolor=colors["green"], bordercolor=colors["line"], padding=7)
+    style.configure("Accent.TButton", background=colors["green"], foreground=colors["button_ink"], bordercolor=colors["green"], padding=(16, 10), font=("Sans", 10, "bold"))
+    style.map("Accent.TButton", background=[("active", "#a8f0bf"), ("disabled", "#3e5948")], foreground=[("disabled", "#819088")])
+    style.configure("Secondary.TButton", background=colors["panel"], foreground=colors["green"], bordercolor=colors["line"], padding=(14, 9), font=("Sans", 10, "bold"))
+    style.map("Secondary.TButton", background=[("active", "#18231f"), ("disabled", "#101512")], foreground=[("disabled", "#53625b")])
+    style.configure("Tail.Horizontal.TProgressbar", troughcolor=colors["panel"], background=colors["green"], bordercolor=colors["line"], lightcolor=colors["green"], darkcolor=colors["green"], thickness=8)
+    style.configure("Tail.Vertical.TScrollbar", background=colors["panel"], troughcolor=colors["panel_dark"], bordercolor=colors["line"], arrowcolor=colors["muted"])
 
     port_value = tk.StringVar(value=(_available_ports() or ["/dev/ttyUSB0"])[0])
     output_value = tk.StringVar(value=str(Path.home() / "Pictures" / "QuickTake 200"))
     first_value = tk.IntVar(value=1)
     last_value = tk.IntVar(value=1)
     status_value = tk.StringVar(value="Put the camera in PC Mode and connect it to Keyspan Port 1.")
+    camera_value = tk.StringVar(value="WAITING")
+    count_value = tk.StringVar(value="—")
 
-    body = ttk.Frame(root, padding=18)
+    body = ttk.Frame(root, padding=(28, 24, 28, 26), style="Tail.TFrame")
     body.pack(fill="both", expand=True)
-    body.columnconfigure(1, weight=1)
-    body.rowconfigure(5, weight=1)
+    body.columnconfigure(0, weight=1)
+    body.rowconfigure(4, weight=1)
 
-    ttk.Label(body, text="Serial port").grid(row=0, column=0, sticky="w", pady=5)
-    port_box = ttk.Combobox(body, textvariable=port_value, values=_available_ports(), state="normal")
-    port_box.grid(row=0, column=1, columnspan=2, sticky="ew", padx=(12, 0), pady=5)
+    masthead = ttk.Frame(body, style="Tail.TFrame")
+    masthead.grid(row=0, column=0, sticky="ew", pady=(0, 20))
+    masthead.columnconfigure(0, weight=1)
+    tk.Label(masthead, text="LOCAL CAMERA TRANSFER", bg=colors["bg"], fg=colors["green"], font=("Sans", 9, "bold"), anchor="w").grid(row=0, column=0, sticky="w")
+    tk.Label(masthead, text="QuickTake", bg=colors["bg"], fg=colors["ink"], font=("Monospace", 34, "bold"), anchor="w").grid(row=1, column=0, sticky="w", pady=(0, 2))
+    tk.Label(masthead, text="Move photographs from an Apple QuickTake 200—safely, locally, and without changing the camera.", bg=colors["bg"], fg=colors["muted"], font=("Sans", 11), anchor="w").grid(row=2, column=0, sticky="w")
+    status_badge = tk.Label(masthead, textvariable=camera_value, bg=colors["panel_dark"], fg=colors["amber"], font=("Monospace", 9, "bold"), padx=14, pady=8, highlightthickness=1, highlightbackground=colors["line"])
+    status_badge.grid(row=0, column=1, rowspan=2, sticky="ne", padx=(20, 0))
 
-    ttk.Label(body, text="Save photos in").grid(row=1, column=0, sticky="w", pady=5)
-    ttk.Entry(body, textvariable=output_value).grid(row=1, column=1, sticky="ew", padx=12, pady=5)
-    ttk.Button(body, text="Choose…", command=lambda: output_value.set(
+    summary = tk.Frame(body, bg=colors["line"], highlightthickness=1, highlightbackground=colors["line"])
+    summary.grid(row=1, column=0, sticky="ew", pady=(0, 18))
+    summary.columnconfigure((0, 1, 2), weight=1, uniform="summary")
+    for column, (heading, variable, note) in enumerate((
+        ("CAMERA", camera_value, "Apple QuickTake 200"),
+        ("PHOTOS", count_value, "Available to download"),
+        ("SERIAL PORT", port_value, "Keyspan USA-28 · Port 1"),
+    )):
+        card = tk.Frame(summary, bg=colors["panel_dark"], padx=18, pady=14)
+        card.grid(row=0, column=column, sticky="nsew", padx=(0 if column == 0 else 1, 0))
+        tk.Label(card, text=heading, bg=colors["panel_dark"], fg=colors["green"], font=("Sans", 8, "bold"), anchor="w").pack(fill="x")
+        tk.Label(card, textvariable=variable, bg=colors["panel_dark"], fg=colors["ink"], font=("Monospace", 16, "bold"), anchor="w").pack(fill="x", pady=(5, 1))
+        tk.Label(card, text=note, bg=colors["panel_dark"], fg=colors["muted"], font=("Sans", 8), anchor="w").pack(fill="x")
+
+    controls = tk.Frame(body, bg=colors["panel_dark"], padx=18, pady=16, highlightthickness=1, highlightbackground=colors["line"])
+    controls.grid(row=2, column=0, sticky="ew", pady=(0, 14))
+    controls.columnconfigure(1, weight=1)
+    tk.Label(controls, text="TRANSFER SETUP", bg=colors["panel_dark"], fg=colors["green"], font=("Sans", 8, "bold"), anchor="w").grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 9))
+    ttk.Label(controls, text="Serial port", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=5)
+    port_box = ttk.Combobox(controls, textvariable=port_value, values=_available_ports(), state="normal", style="Tail.TCombobox")
+    port_box.grid(row=1, column=1, columnspan=2, sticky="ew", padx=(16, 0), pady=5)
+
+    ttk.Label(controls, text="Save photos in", style="Muted.TLabel").grid(row=2, column=0, sticky="w", pady=5)
+    ttk.Entry(controls, textvariable=output_value, style="Tail.TEntry").grid(row=2, column=1, sticky="ew", padx=16, pady=5)
+    ttk.Button(controls, text="Choose…", style="Secondary.TButton", command=lambda: output_value.set(
         filedialog.askdirectory(initialdir=output_value.get()) or output_value.get()
-    )).grid(row=1, column=2, pady=5)
+    )).grid(row=2, column=2, pady=5)
 
-    range_row = ttk.Frame(body)
-    range_row.grid(row=2, column=0, columnspan=3, sticky="w", pady=(10, 2))
-    ttk.Label(range_row, text="Photo range:").pack(side="left")
-    ttk.Label(range_row, text="From").pack(side="left", padx=(12, 4))
-    first_box = ttk.Spinbox(range_row, from_=1, to=9999, width=6, textvariable=first_value)
+    range_row = ttk.Frame(controls, style="Panel.TFrame")
+    range_row.grid(row=3, column=1, columnspan=2, sticky="w", padx=(16, 0), pady=(7, 0))
+    ttk.Label(controls, text="Photo range", style="Muted.TLabel").grid(row=3, column=0, sticky="w", pady=(7, 0))
+    ttk.Label(range_row, text="FROM", style="Eyebrow.TLabel").pack(side="left", padx=(0, 6))
+    first_box = ttk.Spinbox(range_row, from_=1, to=9999, width=6, textvariable=first_value, style="Tail.TSpinbox")
     first_box.pack(side="left")
-    ttk.Label(range_row, text="Through").pack(side="left", padx=(12, 4))
-    last_box = ttk.Spinbox(range_row, from_=1, to=9999, width=6, textvariable=last_value)
+    ttk.Label(range_row, text="THROUGH", style="Eyebrow.TLabel").pack(side="left", padx=(16, 6))
+    last_box = ttk.Spinbox(range_row, from_=1, to=9999, width=6, textvariable=last_value, style="Tail.TSpinbox")
     last_box.pack(side="left")
 
-    progress = ttk.Progressbar(body, mode="determinate")
-    progress.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(12, 7))
-    ttk.Label(body, textvariable=status_value, wraplength=570).grid(
-        row=4, column=0, columnspan=3, sticky="w", pady=(0, 10)
-    )
-    photos = tk.Listbox(body, selectmode=tk.EXTENDED, exportselection=False)
-    photos.grid(row=5, column=0, columnspan=3, sticky="nsew")
+    progress = ttk.Progressbar(body, mode="determinate", style="Tail.Horizontal.TProgressbar")
+    progress.grid(row=3, column=0, sticky="ew", pady=(0, 8))
+    status_label = tk.Label(body, textvariable=status_value, wraplength=760, bg=colors["bg"], fg=colors["muted"], font=("Sans", 9), anchor="w", justify="left")
+    status_label.grid(row=5, column=0, sticky="ew", pady=(8, 10))
+
+    inventory = tk.Frame(body, bg=colors["panel_dark"], highlightthickness=1, highlightbackground=colors["line"])
+    inventory.grid(row=4, column=0, sticky="nsew")
+    inventory.columnconfigure(0, weight=1)
+    inventory.rowconfigure(1, weight=1)
+    list_head = tk.Frame(inventory, bg=colors["panel_dark"], padx=15, pady=10)
+    list_head.grid(row=0, column=0, columnspan=2, sticky="ew")
+    tk.Label(list_head, text="CAMERA INVENTORY", bg=colors["panel_dark"], fg=colors["green"], font=("Sans", 8, "bold"), anchor="w").pack(side="left")
+    tk.Label(list_head, text="Select consecutive rows to set a range", bg=colors["panel_dark"], fg=colors["muted"], font=("Sans", 8), anchor="e").pack(side="right")
+    photos = tk.Listbox(inventory, selectmode=tk.EXTENDED, exportselection=False, bg=colors["panel_dark"], fg=colors["ink"], selectbackground="#294c3b", selectforeground=colors["green"], highlightthickness=0, borderwidth=0, activestyle="none", font=("Monospace", 10), relief="flat")
+    photos.grid(row=1, column=0, sticky="nsew", padx=(15, 0), pady=(0, 12))
+    scrollbar = ttk.Scrollbar(inventory, orient="vertical", command=photos.yview, style="Tail.Vertical.TScrollbar")
+    scrollbar.grid(row=1, column=1, sticky="ns", padx=(6, 8), pady=(0, 12))
+    photos.configure(yscrollcommand=scrollbar.set)
 
     def use_list_selection(_event=None) -> None:
         selected = photos.curselection()
@@ -283,6 +356,10 @@ def gui_main() -> int:
 
     photos.bind("<<ListboxSelect>>", use_list_selection)
 
+    def set_camera_state(text: str, color: str) -> None:
+        camera_value.set(text)
+        status_badge.configure(fg=color)
+
     def set_busy(busy: bool) -> None:
         download_button.configure(state="disabled" if busy else "normal")
         range_button.configure(state="disabled" if busy else "normal")
@@ -292,6 +369,7 @@ def gui_main() -> int:
         set_busy(False)
         if error:
             status_value.set(f"Could not communicate with the camera: {error}")
+            set_camera_state("CONNECTION ERROR", colors["red"])
             messagebox.showerror("QuickTake 200", str(error))
 
     def camera_job(download: bool, requested_range: tuple[int, int] | None = None) -> None:
@@ -301,6 +379,10 @@ def gui_main() -> int:
             camera = QuickTake200(serial)
             camera.connect(9600)
             count = camera.picture_count()
+            root.after(0, lambda: (
+                set_camera_state("CONNECTED", colors["green"]),
+                count_value.set(str(count)),
+            ))
             reset_range = not download
             root.after(0, lambda: (
                 photos.delete(0, tk.END),
@@ -367,15 +449,16 @@ def gui_main() -> int:
                 return
         set_busy(True)
         status_value.set("Connecting to the camera…")
+        set_camera_state("CONNECTING", colors["amber"])
         threading.Thread(target=camera_job, args=(download, requested_range), daemon=True).start()
 
-    buttons = ttk.Frame(body)
-    buttons.grid(row=6, column=0, columnspan=3, sticky="e", pady=(14, 0))
-    refresh_button = ttk.Button(buttons, text="Show Photos", command=lambda: start(False))
+    buttons = ttk.Frame(body, style="Tail.TFrame")
+    buttons.grid(row=6, column=0, sticky="e", pady=(3, 0))
+    refresh_button = ttk.Button(buttons, text="Show Photos", style="Secondary.TButton", command=lambda: start(False))
     refresh_button.pack(side="left", padx=5)
-    range_button = ttk.Button(buttons, text="Download Range", command=lambda: start(True, True))
+    range_button = ttk.Button(buttons, text="Download Range", style="Secondary.TButton", command=lambda: start(True, True))
     range_button.pack(side="left", padx=(0, 5))
-    download_button = ttk.Button(buttons, text="Download All", command=lambda: start(True))
+    download_button = ttk.Button(buttons, text="Download All", style="Accent.TButton", command=lambda: start(True))
     download_button.pack(side="left")
 
     root.mainloop()
