@@ -18,8 +18,6 @@ For the original QuickTake 200 cable:
 | pin 5 | tip | computer receive / camera transmit |
 | pins 4 and 8 | sleeve | signal ground |
 
-Do not connect Keyspan Port 1 to Port 2 for camera use. The camera cable terminates at the camera's 2.5 mm socket.
-
 ## Confirm that Linux sees the adapter
 
 ```sh
